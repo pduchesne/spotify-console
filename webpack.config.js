@@ -11,21 +11,23 @@ const htmlPlugin = new HtmlWebPackPlugin({
 
 module.exports = {
   //specify the entry point for your project
-  entry: "./src/index.js",
+  entry: "./src/index.tsx",
   // specify the output file name
   output: {
     path: path.resolve(__dirname, "dist"),
     filename: "index.js"
   },
+  resolve: {
+    extensions: [".ts", ".tsx", ".js"]
+  },
+  devtool: "source-map",
   module: {
     // consists the transform configuration
     rules: [
       {
-        test: /\.js$/,
+        test: /\.tsx?$/,
         exclude: /node_modules/,
-        use: {
-          loader: "babel-loader"
-        }
+        loader: "ts-loader"
       },
       {
         test: /\.css$/,
@@ -38,7 +40,7 @@ module.exports = {
   devServer: {
     contentBase: path.join(__dirname, "dist"),
     compress: true,
-    port: 3001
+    port: 3000
   },
 
   // this will watch the bundle for any changes
