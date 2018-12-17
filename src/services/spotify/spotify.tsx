@@ -59,7 +59,7 @@ export class CurrentlyPlaying extends React.PureComponent<{ userConnection: User
     timer: number;
 
     componentDidMount() {
-        this.timer = setInterval(() => this.refresh(), 500);
+        this.timer = setInterval(() => this.refresh(), 1000);
     }
 
     refresh() {
