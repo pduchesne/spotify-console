@@ -15,7 +15,8 @@ module.exports = {
   // specify the output file name
   output: {
     path: path.resolve(__dirname, "dist"),
-    filename: "index.js"
+    filename: "index.js",
+    publicPath: "/"
   },
   resolve: {
     extensions: [".ts", ".tsx", ".js"]
@@ -40,7 +41,10 @@ module.exports = {
   devServer: {
     contentBase: path.join(__dirname, "dist"),
     compress: true,
-    port: 3000
+    port: 3000,
+    // needed to properly support BrowsrRouter
+    // see https://stackoverflow.com/questions/43209666/react-router-v4-cannot-get-url
+    historyApiFallback: true
   },
 
   // this will watch the bundle for any changes
