@@ -19,8 +19,11 @@ module.exports = {
     publicPath: "/"
   },
   resolve: {
-    extensions: [".ts", ".tsx", ".js"]
-  },
+    // this is required to be able to do non relative imports of src code
+    modules: [path.resolve('./src'), path.resolve('./node_modules')],
+    // Add `.ts` and `.tsx` as a resolvable extension.
+    extensions: ['.ts', '.tsx', '.js']
+},
   devtool: "source-map",
   module: {
     // consists the transform configuration

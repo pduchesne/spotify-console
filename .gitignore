@@ -1,2 +1,20 @@
-node_modules/
-dist/
+### folders
+.idea
+.rpt2_cache
+node_modules
+logs
+dist/*
+
+### matching
+*.log
+*.tgz
+*.ipr
+*.iws
+*.iml
+
+### files
+package-lock.json
+
+### inverse
+!dist/.gitkeep
+!dist/README.md
