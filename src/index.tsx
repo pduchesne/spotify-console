@@ -3,6 +3,16 @@ import * as React from 'react';
 import * as SpotifyWebApi from 'spotify-web-api-js';
 import { BrowserRouter, Route } from 'react-router-dom';
 import { SpotifyCallback, SpotifyAuthenticateButton, CurrentlyPlaying } from './services/spotify/spotify';
+import { setProxifyUrlFunc } from 'am-scraper';
+import { PROXY_URL } from 'build-constants';
+
+/* Set proxy to use for am-scraper */
+var isNode = new Function('try {return this===global;}catch(e){return false;}');
+function proxifyUrl(url: string) {
+    if (PROXY_URL && !isNode()) return PROXY_URL + encodeURI(url);
+    else return url;
+}
+setProxifyUrlFunc(proxifyUrl);
 
 export interface UserConnection {
     spotifyApi?: SpotifyWebApi.SpotifyWebApiJs;
