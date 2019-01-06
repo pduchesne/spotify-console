@@ -1,10 +1,11 @@
 import * as ReactDOM from 'react-dom';
 import * as React from 'react';
-import * as SpotifyWebApi from 'spotify-web-api-js';
 import { BrowserRouter, Route } from 'react-router-dom';
-import { SpotifyCallback, SpotifyAuthenticateButton, CurrentlyPlaying } from './services/spotify/spotify';
+import { SpotifyCallback, CurrentlyPlaying } from './react/spotify';
 import { setProxifyUrlFunc } from 'am-scraper';
 import { PROXY_URL } from 'build-constants';
+import { Button } from '@material-ui/core';
+import { getAuthenticationUrl, SpotifyService } from 'services/spotify/spotify';
 
 /* Set proxy to use for am-scraper */
 var isNode = new Function('try {return this===global;}catch(e){return false;}');
@@ -15,33 +16,40 @@ function proxifyUrl(url: string) {
 setProxifyUrlFunc(proxifyUrl);
 
 export interface UserConnection {
-    spotifyApi?: SpotifyWebApi.SpotifyWebApiJs;
+    spotifyService: SpotifyService;
     spotifyProfile?: SpotifyApi.CurrentUsersProfileResponse;
 }
 interface AppState {
-    userConnection: UserConnection;
+    userConnection?: UserConnection;
 }
 
-export const UserContext = React.createContext<UserConnection>({});
+export const UserContext = React.createContext<UserConnection | undefined>(undefined);
 
 export class App extends React.PureComponent<{}, AppState> {
-    state = { userConnection: {} };
+    state: AppState = { userConnection: undefined };
 
     authenticateSpotify = (token: string) => {
-        let userConnection: UserConnection = {};
         if (token) {
-            userConnection.spotifyApi = new SpotifyWebApi();
-            userConnection.spotifyApi.setAccessToken(token);
-            userConnection.spotifyApi.getMe().then(user => {
-                this.setState({
-                    userConnection: { ...userConnection, spotifyProfile: user }
+            let spotifyService = new SpotifyService(token);
+            let userConnection = {
+                spotifyService: new SpotifyService(token)
+            };
+
+            spotifyService
+                .getApi()
+                .getMe()
+                .then(user => {
+                    this.setState({
+                        userConnection: { ...userConnection, spotifyProfile: user }
+                    });
                 });
+
+            this.setState({ userConnection: userConnection });
+        } else {
+            this.setState({
+                userConnection: undefined
             });
         }
-
-        this.setState({
-            userConnection: userConnection
-        });
     };
 
     render() {
@@ -55,7 +63,9 @@ export class App extends React.PureComponent<{}, AppState> {
                             render={props => (
                                 <>
                                     <Header {...props} userConnection={this.state.userConnection} />
-                                    <CurrentlyPlaying userConnection={this.state.userConnection} />
+                                    {this.state.userConnection && (
+                                        <CurrentlyPlaying spotifyService={this.state.userConnection.spotifyService} />
+                                    )}
                                 </>
                             )}
                         />
@@ -71,13 +81,13 @@ export class App extends React.PureComponent<{}, AppState> {
     }
 }
 
-class Header extends React.PureComponent<{ userConnection: UserConnection }, {}> {
+class Header extends React.PureComponent<{ userConnection?: UserConnection }, {}> {
     render() {
         let { userConnection } = this.props;
 
         let rootUrl = window.location.protocol + '//' + window.location.host;
 
-        if (userConnection.spotifyApi) {
+        if (userConnection) {
             if (userConnection.spotifyProfile) return <h2>Spotify Console for {userConnection.spotifyProfile.display_name}</h2>;
             else {
                 return <div>Loading profile ...</div>;
@@ -86,10 +96,13 @@ class Header extends React.PureComponent<{ userConnection: UserConnection }, {}>
             return (
                 <div>
                     Not authenticated
-                    <SpotifyAuthenticateButton
-                        callbackUrl={rootUrl + '/callback/spotify'}
-                        spotifyClientId="351c8186ba274223974a895974580b87"
-                    />
+                    <Button
+                        size="small"
+                        href={getAuthenticationUrl(rootUrl + '/callback/spotify', '351c8186ba274223974a895974580b87')}
+                        variant="contained"
+                        color="primary">
+                        Connect Spotify
+                    </Button>
                 </div>
             );
     }

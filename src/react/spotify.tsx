@@ -1,25 +1,10 @@
 import * as React from 'react';
-import Button from '@material-ui/core/Button';
 import { Redirect, Link } from 'react-router-dom';
 import * as queryString from 'query-string';
-import { UserConnection } from '../..';
-import * as SpotifyWebApi from 'spotify-web-api-js';
 import Icon from '@material-ui/core/Icon';
 import { IconButton } from '@material-ui/core';
-import { AMSimilar } from 'services/am/am';
-
-const authUri = (rootUrl: string, clientId: string) =>
-    `https://accounts.spotify.com/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
-        rootUrl
-    )}&scope=user-read-private%20user-read-email%20user-read-playback-state%20user-modify-playback-state&response_type=token&state=123`;
-
-export const SpotifyAuthenticateButton = (props: { callbackUrl: string; spotifyClientId: string }) => {
-    return (
-        <Button size="small" href={authUri(props.callbackUrl, props.spotifyClientId)} variant="contained" color="primary">
-            Connect Spotify
-        </Button>
-    );
-};
+import { AMSimilar } from 'react/am';
+import { SpotifyService } from 'services/spotify/spotify';
 
 export class SpotifyCallback extends React.PureComponent<{ location: any; setToken: (token: string) => void }, {}> {
     state: { hasReceivedToken?: boolean } = {};
@@ -63,27 +48,23 @@ const styles = {
 };
 
 class ArtistPlayButton extends React.PureComponent<
-    { artistName: string; spotifyApi?: SpotifyWebApi.SpotifyWebApiJs },
+    { artistName: string; spotifyService: SpotifyService },
     { artist?: SpotifyApi.ArtistObjectFull }
 > {
     state: { artist?: SpotifyApi.ArtistObjectFull } = { artist: undefined };
 
     componentDidMount() {
-        let { spotifyApi, artistName } = this.props;
-        if (spotifyApi && artistName)
-            spotifyApi
-                .searchArtists(artistName, { limit: 1 })
-                .then(response => (response.artists.items.length > 0 ? response.artists.items[0] : undefined))
-                .then(artist => this.setState({ artist: artist }));
+        let { spotifyService, artistName } = this.props;
+        if (spotifyService && artistName) spotifyService.getArtistByName(artistName).then(artist => this.setState({ artist: artist }));
     }
 
     render() {
-        let { spotifyApi } = this.props;
+        let { spotifyService } = this.props;
         let { artist } = this.state;
 
         if (artist !== undefined) {
             return (
-                <IconButton style={styles.button} color="primary" onClick={() => spotifyApi!.play({ context_uri: artist!.uri })}>
+                <IconButton style={styles.button} color="primary" onClick={() => spotifyService.play(artist!.uri)}>
                     <Icon style={styles.icon}>play_circle_outline</Icon>
                 </IconButton>
             );
@@ -95,13 +76,13 @@ class ArtistPlayButton extends React.PureComponent<
 
 interface CurrentlyPlayingState {
     currentlyPlaying?: SpotifyApi.CurrentlyPlayingResponse;
-    spotifyApi?: SpotifyWebApi.SpotifyWebApiJs;
 }
-export class CurrentlyPlaying extends React.PureComponent<{ userConnection: UserConnection }, CurrentlyPlayingState> {
+export class CurrentlyPlaying extends React.PureComponent<{ spotifyService: SpotifyService }, CurrentlyPlayingState> {
     // see recommended pattern : https://github.com/reactjs/rfcs/issues/26
 
     state: CurrentlyPlayingState = {};
 
+    /*
     static getDerivedStateFromProps(nextProps: { userConnection: UserConnection }, prevState: CurrentlyPlayingState) {
         let newApi = nextProps.userConnection ? nextProps.userConnection.spotifyApi : undefined;
         if (!prevState || newApi !== prevState.spotifyApi)
@@ -111,6 +92,7 @@ export class CurrentlyPlaying extends React.PureComponent<{ userConnection: User
 
         return null;
     }
+    */
 
     timer: any;
     componentDidMount() {
@@ -120,38 +102,39 @@ export class CurrentlyPlaying extends React.PureComponent<{ userConnection: User
     }
 
     refresh() {
-        if (this.state.spotifyApi !== undefined)
-            this.state.spotifyApi.getMyCurrentPlayingTrack((error, results) => {
+        if (this.props.spotifyService.spotifyApi !== undefined)
+            this.props.spotifyService.spotifyApi.getMyCurrentPlayingTrack((error, results) => {
                 this.setState({ currentlyPlaying: results });
             });
     }
 
     render() {
-        let { currentlyPlaying, spotifyApi } = this.state;
+        let { currentlyPlaying } = this.state;
+        let spotifyService = this.props.spotifyService;
 
         const renderNowPlaying = (currentlyPlaying: SpotifyApi.CurrentlyPlayingResponse) => (
             <>
                 <div>
                     {currentlyPlaying.item!.name}
-                    <IconButton color="primary" onClick={() => spotifyApi!.skipToPrevious()}>
+                    <IconButton color="primary" onClick={() => spotifyService.getApi().skipToPrevious()}>
                         <Icon>skip_previous</Icon>
                     </IconButton>
                     {currentlyPlaying.is_playing ? (
-                        <IconButton color="primary" onClick={() => spotifyApi!.pause()}>
+                        <IconButton color="primary" onClick={() => spotifyService.getApi().pause()}>
                             <Icon>pause_circle_outline</Icon>
                         </IconButton>
                     ) : (
-                        <IconButton color="primary" onClick={() => spotifyApi!.play()}>
+                        <IconButton color="primary" onClick={() => spotifyService.getApi().play()}>
                             <Icon>play_circle_outline</Icon>
                         </IconButton>
                     )}
-                    <IconButton color="primary" onClick={() => spotifyApi!.skipToNext()}>
+                    <IconButton color="primary" onClick={() => spotifyService.getApi().skipToNext()}>
                         <Icon>skip_next</Icon>
                     </IconButton>
                 </div>
                 <AMSimilar
                     query={currentlyPlaying.item!.artists[0].name}
-                    renderPlayAction={(artistName: string) => <ArtistPlayButton artistName={artistName} spotifyApi={spotifyApi} />}
+                    renderPlayAction={(artistName: string) => <ArtistPlayButton artistName={artistName} spotifyService={spotifyService} />}
                 />
             </>
         );
