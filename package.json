@@ -27,7 +27,7 @@
         "typescript": "3.2.2",
         "webpack": "4.27.1",
         "webpack-cli": "3.1.2",
-        "webpack-dev-server": "3.1.10"
+        "webpack-dev-server": "3.1.11"
     },
     "dependencies": {
         "@material-ui/core": "3.7.0",
@@ -37,7 +37,7 @@
         "query-string": "6.2.0",
         "am-scraper": "pduchesne/am-scraper",
         "react": "16.3.2",
-        "react-dom": "16.3.2",
+        "react-dom": "16.3.3",
         "react-router": "4.3.1",
         "react-router-dom": "4.3.1",
         "spotify-web-api-js": "pduchesne/spotify-web-api-js#fix_play_request_type"
