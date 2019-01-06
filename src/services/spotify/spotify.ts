@@ -7,6 +7,7 @@ export const getAuthenticationUrl = (rootUrl: string, clientId: string) =>
 
 export class SpotifyService {
     spotifyApi: SpotifyWebApi.SpotifyWebApiJs;
+    currentDeviceId?: string;
 
     constructor(apiToken: string) {
         this.spotifyApi = new SpotifyWebApi();
@@ -19,8 +20,8 @@ export class SpotifyService {
             .then(response => (response.artists.items.length > 0 ? response.artists.items[0] : undefined));
     }
 
-    play(artistUri: string) {
-        this.spotifyApi.play({ context_uri: artistUri });
+    play(artistUri: string, device_id?: string) {
+        this.spotifyApi.play({ context_uri: artistUri, device_id: device_id || this.currentDeviceId });
     }
 
     getApi() {

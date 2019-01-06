@@ -1,7 +1,7 @@
 import * as ReactDOM from 'react-dom';
 import * as React from 'react';
 import { BrowserRouter, Route } from 'react-router-dom';
-import { SpotifyCallback, CurrentlyPlaying } from './react/spotify';
+import { SpotifyCallback, CurrentlyPlaying, DeviceSelector } from './react/spotify';
 import { setProxifyUrlFunc } from 'am-scraper';
 import { PROXY_URL } from 'build-constants';
 import { Button } from '@material-ui/core';
@@ -18,6 +18,8 @@ setProxifyUrlFunc(proxifyUrl);
 export interface UserConnection {
     spotifyService: SpotifyService;
     spotifyProfile?: SpotifyApi.CurrentUsersProfileResponse;
+    spotifyDevices?: SpotifyApi.UserDevice[];
+    selectedDeviceId?: string;
 }
 interface AppState {
     userConnection?: UserConnection;
@@ -35,19 +37,40 @@ export class App extends React.PureComponent<{}, AppState> {
                 spotifyService: new SpotifyService(token)
             };
 
+            this.setState({ userConnection: userConnection });
+
             spotifyService
                 .getApi()
                 .getMe()
                 .then(user => {
                     this.setState({
-                        userConnection: { ...userConnection, spotifyProfile: user }
+                        userConnection: this.state.userConnection && { ...this.state.userConnection, spotifyProfile: user }
                     });
                 });
 
-            this.setState({ userConnection: userConnection });
+            spotifyService
+                .getApi()
+                .getMyDevices()
+                .then(devicesResponse => {
+                    this.setState({
+                        userConnection: this.state.userConnection && {
+                            ...this.state.userConnection,
+                            spotifyDevices: devicesResponse.devices
+                        }
+                    });
+                });
         } else {
             this.setState({
                 userConnection: undefined
+            });
+        }
+    };
+
+    selectPlaybackDevice = (deviceId: string) => {
+        if (this.state.userConnection) {
+            this.state.userConnection.spotifyService.currentDeviceId = deviceId;
+            this.setState({
+                userConnection: { ...this.state.userConnection, selectedDeviceId: deviceId }
             });
         }
     };
@@ -64,7 +87,14 @@ export class App extends React.PureComponent<{}, AppState> {
                                 <>
                                     <Header {...props} userConnection={this.state.userConnection} />
                                     {this.state.userConnection && (
-                                        <CurrentlyPlaying spotifyService={this.state.userConnection.spotifyService} />
+                                        <>
+                                            <DeviceSelector
+                                                selected={this.state.userConnection.selectedDeviceId}
+                                                devices={this.state.userConnection.spotifyDevices}
+                                                onchange={this.selectPlaybackDevice}
+                                            />
+                                            <CurrentlyPlaying spotifyService={this.state.userConnection.spotifyService} />
+                                        </>
                                     )}
                                 </>
                             )}

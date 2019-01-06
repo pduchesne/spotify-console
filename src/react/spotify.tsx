@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Redirect, Link } from 'react-router-dom';
 import * as queryString from 'query-string';
 import Icon from '@material-ui/core/Icon';
-import { IconButton } from '@material-ui/core';
+import { IconButton, Select, MenuItem } from '@material-ui/core';
 import { AMSimilar } from 'react/am';
 import { SpotifyService } from 'services/spotify/spotify';
 
@@ -102,10 +102,9 @@ export class CurrentlyPlaying extends React.PureComponent<{ spotifyService: Spot
     }
 
     refresh() {
-        if (this.props.spotifyService.spotifyApi !== undefined)
-            this.props.spotifyService.spotifyApi.getMyCurrentPlayingTrack((error, results) => {
-                this.setState({ currentlyPlaying: results });
-            });
+        this.props.spotifyService.spotifyApi.getMyCurrentPlayingTrack((error, results) => {
+            this.setState({ currentlyPlaying: results });
+        });
     }
 
     render() {
@@ -142,6 +141,42 @@ export class CurrentlyPlaying extends React.PureComponent<{ spotifyService: Spot
         return (
             <div>
                 Currently playing :{currentlyPlaying && currentlyPlaying.item ? renderNowPlaying(currentlyPlaying) : <div>Nothing</div>}
+            </div>
+        );
+    }
+}
+
+export class DeviceSelector extends React.PureComponent<
+    { selected?: string; devices?: SpotifyApi.UserDevice[]; onchange: (deviceId?: string) => void },
+    {}
+> {
+    render() {
+        let devices = this.props.devices;
+
+        return (
+            <div>
+                <Select
+                    value={this.props.selected || ''}
+                    onChange={e => this.props.onchange(e.target.value == '' ? undefined : e.target.value)}
+                    inputProps={
+                        {
+                            //allowEmpty: true
+                            //  name: 'age',
+                            //  id: 'age-simple',
+                        }
+                    }>
+                    <MenuItem value="">
+                        <em>None</em>
+                    </MenuItem>
+                    {devices &&
+                        devices
+                            .filter(device => device.id != null)
+                            .map(device => (
+                                <MenuItem key={device.id!} value={device.id!} style={{ fontWeight: device.is_active ? 'bold' : undefined }}>
+                                    {device.name}
+                                </MenuItem>
+                            ))}
+                </Select>
             </div>
         );
     }
