@@ -1,10 +1,18 @@
 import * as SpotifyWebApi from 'spotify-web-api-js';
 import { Subject, Observable } from 'rxjs';
 
+const required_roles = [
+    'user-top-read',
+    'user-read-recently-played',
+    'user-read-private',
+    'user-read-email',
+    'user-read-playback-state',
+    'user-modify-playback-state'
+];
 export const getAuthenticationUrl = (rootUrl: string, clientId: string) =>
-    `https://accounts.spotify.com/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
-        rootUrl
-    )}&scope=user-read-recently-played%20user-read-private%20user-read-email%20user-read-playback-state%20user-modify-playback-state&response_type=token&state=123`;
+    `https://accounts.spotify.com/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(rootUrl)}&scope=${encodeURIComponent(
+        required_roles.join(' ')
+    )}&response_type=token&state=123`;
 
 export class PlayerEvent<T> {
     oldValue: T;

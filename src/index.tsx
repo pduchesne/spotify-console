@@ -1,7 +1,15 @@
 import * as ReactDOM from 'react-dom';
 import * as React from 'react';
 import { BrowserRouter, Route } from 'react-router-dom';
-import { SpotifyCallback, CurrentlyPlaying, DeviceSelector, ArtistPlayButton, PlayerHistory, TrackPlayButton } from './react/spotify';
+import {
+    SpotifyCallback,
+    CurrentlyPlaying,
+    DeviceSelector,
+    ArtistPlayButton,
+    PlayerHistory,
+    TrackPlayButton,
+    TopTracks
+} from './react/spotify';
 import { setProxifyUrlFunc } from 'am-scraper';
 import { PROXY_URL } from 'build-constants';
 import { Grid, Paper } from '@material-ui/core';
@@ -182,6 +190,15 @@ class DashBoard extends React.PureComponent<{ userConnection: UserConnection }, 
                     )}
                 />
             );
+
+        widgets.push(
+            <TopTracks
+                spotifyService={this.props.userConnection.spotifyService}
+                renderPlayAction={(trackUri: string) => (
+                    <TrackPlayButton trackUri={trackUri} spotifyService={this.props.userConnection.spotifyService} />
+                )}
+            />
+        );
 
         let currentTrack = this.state.currentlyPlayingObject && this.state.currentlyPlayingObject.item;
         if (currentTrack)

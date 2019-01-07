@@ -178,3 +178,61 @@ export class PlayerHistory extends React.Component<
         );
     }
 }
+
+type TopTracksProps = {
+    spotifyService: SpotifyService;
+    renderPlayAction?: (trackUri: string) => JSX.Element;
+};
+
+type TopTracksState = {
+    topTracksResponse?: SpotifyApi.UsersTopTracksResponse;
+    range?: string;
+};
+
+export class TopTracks extends React.Component<TopTracksProps, TopTracksState> {
+    state: TopTracksState = { range: 'medium_term' };
+
+    fetchTopTracks() {
+        let options: { time_range?: string } = {};
+
+        if (this.state.range) options.time_range = this.state.range;
+        this.props.spotifyService
+            .getApi()
+            .getMyTopTracks(options)
+            .then(resp => this.setState({ topTracksResponse: resp }));
+    }
+
+    componentDidMount() {
+        this.fetchTopTracks();
+    }
+
+    componentDidUpdate(prevProps: TopTracksProps, prevState: TopTracksState) {
+        if (prevState.range != this.state.range) this.fetchTopTracks();
+    }
+
+    render() {
+        return (
+            <div>
+                Top Tracks
+                <Select
+                    value={this.state.range || ''}
+                    onChange={e => this.setState({ range: e.target.value == '' ? undefined : e.target.value })}>
+                    <MenuItem value="short_term">Short Term</MenuItem>
+                    <MenuItem value="medium_term">Medium Term</MenuItem>
+                    <MenuItem value="long_term">Long Term</MenuItem>
+                </Select>
+                {this.state.topTracksResponse ? (
+                    <ul>
+                        {this.state.topTracksResponse.items.map((track, idx) => (
+                            <li key={track.id + '_' + idx}>
+                                {track.name} {this.props.renderPlayAction ? this.props.renderPlayAction(track.uri) : null}
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <div>Loading ...</div>
+                )}
+            </div>
+        );
+    }
+}
