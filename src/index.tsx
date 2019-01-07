@@ -184,9 +184,37 @@ class DashBoard extends React.PureComponent<{ userConnection: UserConnection }, 
         this.setState({ currentlyPlayingObject: this.props.userConnection.spotifyService.monitor.currentState });
     }
 
+    renderWidgets(): JSX.Element[] {
+        let widgets: JSX.Element[] = [];
+
+        if (this.state.recentTracks)
+            widgets.push(
+                <PlayerHistory
+                    tracks={this.state.recentTracks}
+                    renderPlayAction={(trackUri: string) => (
+                        <TrackPlayButton trackUri={trackUri} spotifyService={this.props.userConnection.spotifyService} />
+                    )}
+                />
+            );
+
+        let currentTrack = this.state.currentlyPlayingObject && this.state.currentlyPlayingObject.item;
+        if (currentTrack)
+            widgets.push(
+                <AMSimilar
+                    query={currentTrack.artists[0].name}
+                    renderPlayAction={(artistName: string) => (
+                        <ArtistPlayButton artistName={artistName} spotifyService={this.props.userConnection.spotifyService} />
+                    )}
+                />
+            );
+
+        return widgets;
+    }
+
     render() {
         let { userConnection } = this.props;
-        let currentTrack = this.state.currentlyPlayingObject && this.state.currentlyPlayingObject.item;
+        let widgets = this.renderWidgets();
+
         return (
             <>
                 <DeviceSelector
@@ -196,36 +224,11 @@ class DashBoard extends React.PureComponent<{ userConnection: UserConnection }, 
                 />
                 <CurrentlyPlaying currentlyPlaying={this.state.currentlyPlayingObject} spotifyService={userConnection.spotifyService} />
                 <Grid container spacing={24}>
-                    {this.state.recentTracks && (
-                        <Grid item xs>
-                            <Paper>
-                                <PlayerHistory
-                                    tracks={this.state.recentTracks}
-                                    renderPlayAction={(trackUri: string) => (
-                                        <TrackPlayButton trackUri={trackUri} spotifyService={userConnection.spotifyService} />
-                                    )}
-                                />
-                            </Paper>
+                    {widgets.map((widget, idx) => (
+                        <Grid item xs key={idx}>
+                            <Paper>{widget}</Paper>
                         </Grid>
-                    )}
-                    {currentTrack && (
-                        <Grid item xs>
-                            <Paper>
-                                <AMSimilar
-                                    query={currentTrack.artists[0].name}
-                                    renderPlayAction={(artistName: string) => (
-                                        <ArtistPlayButton artistName={artistName} spotifyService={userConnection.spotifyService} />
-                                    )}
-                                />
-                            </Paper>
-                        </Grid>
-                    )}
-                    <Grid item xs>
-                        test
-                    </Grid>
-                    <Grid item xs>
-                        test
-                    </Grid>
+                    ))}
                 </Grid>
             </>
         );
