@@ -13,8 +13,7 @@ interface AMSimilarState {
 
 /* this cannot be a PureComponent because of the renderPlayAction prop */
 export class AMSimilar extends React.Component<AMSimilarProps, AMSimilarState> {
-
-    state: AMSimilarState = {similarArtists: []};
+    state: AMSimilarState = { similarArtists: [] };
 
     static getDerivedStateFromProps(nextProps: AMSimilarProps, prevState: AMSimilarState) {
         if (nextProps.query !== prevState.currentQuery)

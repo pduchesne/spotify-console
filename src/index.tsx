@@ -4,7 +4,7 @@ import { BrowserRouter, Route } from 'react-router-dom';
 import { SpotifyCallback, CurrentlyPlaying, DeviceSelector, ArtistPlayButton, PlayerHistory, TrackPlayButton } from './react/spotify';
 import { setProxifyUrlFunc } from 'am-scraper';
 import { PROXY_URL } from 'build-constants';
-import { Button, Grid, Paper } from '@material-ui/core';
+import { Grid, Paper } from '@material-ui/core';
 import {
     getAuthenticationUrl,
     SpotifyService,
@@ -86,14 +86,16 @@ export class App extends React.PureComponent<{}, AppState> {
                         <Route
                             exact
                             path="/"
-                            render={props => (
-                                <>
-                                    <Header {...props} userConnection={this.state.userConnection} />
-                                    {/* TODO include Header in DashBoard and redirect this route automatically to authentication when needed*/
+                            render={props => {
+                                if (this.state.userConnection) return <DashBoard userConnection={this.state.userConnection} />;
+                                else {
+                                    let rootUrl = window.location.protocol + '//' + window.location.host;
+                                    let authUrl = getAuthenticationUrl(rootUrl + '/callback/spotify', '351c8186ba274223974a895974580b87');
 
-                                    this.state.userConnection && <DashBoard userConnection={this.state.userConnection} />}
-                                </>
-                            )}
+                                    window.location.href = authUrl;
+                                    return null;
+                                }
+                            }}
                         />
                         <Route
                             exact
@@ -107,30 +109,14 @@ export class App extends React.PureComponent<{}, AppState> {
     }
 }
 
-class Header extends React.PureComponent<{ userConnection?: UserConnection }, {}> {
+class Header extends React.PureComponent<{ userConnection: UserConnection }, {}> {
     render() {
         let { userConnection } = this.props;
 
-        let rootUrl = window.location.protocol + '//' + window.location.host;
-
-        if (userConnection) {
-            if (userConnection.spotifyProfile) return <h2>Spotify Console for {userConnection.spotifyProfile.display_name}</h2>;
-            else {
-                return <div>Loading profile ...</div>;
-            }
-        } else
-            return (
-                <div>
-                    Not authenticated
-                    <Button
-                        size="small"
-                        href={getAuthenticationUrl(rootUrl + '/callback/spotify', '351c8186ba274223974a895974580b87')}
-                        variant="contained"
-                        color="primary">
-                        Connect Spotify
-                    </Button>
-                </div>
-            );
+        if (userConnection.spotifyProfile) return <h2>Spotify Console for {userConnection.spotifyProfile.display_name}</h2>;
+        else {
+            return <div>Loading profile ...</div>;
+        }
     }
 }
 
@@ -217,6 +203,7 @@ class DashBoard extends React.PureComponent<{ userConnection: UserConnection }, 
 
         return (
             <>
+                <Header userConnection={userConnection} />
                 <DeviceSelector
                     selected={this.state.selectedDeviceId}
                     devices={userConnection.spotifyDevices}

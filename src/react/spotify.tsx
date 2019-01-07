@@ -133,30 +133,28 @@ export class DeviceSelector extends React.PureComponent<
         let devices = this.props.devices;
 
         return (
-            <div>
-                <Select
-                    value={this.props.selected || ''}
-                    onChange={e => this.props.onchange(e.target.value == '' ? undefined : e.target.value)}
-                    inputProps={
-                        {
-                            //allowEmpty: true
-                            //  name: 'age',
-                            //  id: 'age-simple',
-                        }
-                    }>
-                    <MenuItem value="">
-                        <em>None</em>
-                    </MenuItem>
-                    {devices &&
-                        devices
-                            .filter(device => device.id != null)
-                            .map(device => (
-                                <MenuItem key={device.id!} value={device.id!} style={{ fontWeight: device.is_active ? 'bold' : undefined }}>
-                                    {device.name}
-                                </MenuItem>
-                            ))}
-                </Select>
-            </div>
+            <Select
+                value={this.props.selected || ''}
+                onChange={e => this.props.onchange(e.target.value == '' ? undefined : e.target.value)}
+                inputProps={
+                    {
+                        //allowEmpty: true
+                        //  name: 'age',
+                        //  id: 'age-simple',
+                    }
+                }>
+                <MenuItem value="">
+                    <em>None</em>
+                </MenuItem>
+                {devices &&
+                    devices
+                        .filter(device => device.id != null)
+                        .map(device => (
+                            <MenuItem key={device.id!} value={device.id!} style={{ fontWeight: device.is_active ? 'bold' : undefined }}>
+                                {device.name}
+                            </MenuItem>
+                        ))}
+            </Select>
         );
     }
 }
