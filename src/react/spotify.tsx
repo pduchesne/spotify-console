@@ -63,13 +63,23 @@ export class ArtistPlayButton extends React.PureComponent<
 
         if (artist !== undefined) {
             return (
-                <IconButton style={styles.button} color="primary" onClick={() => spotifyService.play(artist!.uri)}>
+                <IconButton style={styles.button} color="primary" onClick={() => spotifyService.playArtist(artist!.uri)}>
                     <Icon style={styles.icon}>play_circle_outline</Icon>
                 </IconButton>
             );
         } else {
             return null;
         }
+    }
+}
+
+export class TrackPlayButton extends React.PureComponent<{ trackUri: string; spotifyService: SpotifyService }> {
+    render() {
+        return (
+            <IconButton style={styles.button} color="primary" onClick={() => this.props.spotifyService.playTrack([this.props.trackUri])}>
+                <Icon style={styles.icon}>play_circle_outline</Icon>
+            </IconButton>
+        );
     }
 }
 
@@ -146,6 +156,26 @@ export class DeviceSelector extends React.PureComponent<
                                 </MenuItem>
                             ))}
                 </Select>
+            </div>
+        );
+    }
+}
+
+export class PlayerHistory extends React.Component<
+    { tracks: SpotifyApi.PlayHistoryObject[]; renderPlayAction?: (trackUri: string) => JSX.Element },
+    {}
+> {
+    render() {
+        return (
+            <div>
+                PlayerHistory
+                <ul>
+                    {this.props.tracks.map((track, idx) => (
+                        <li key={track.track.id + '_' + idx}>
+                            {track.track.name} {this.props.renderPlayAction ? this.props.renderPlayAction(track.track.uri) : null}
+                        </li>
+                    ))}
+                </ul>
             </div>
         );
     }

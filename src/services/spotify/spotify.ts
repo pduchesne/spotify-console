@@ -4,7 +4,7 @@ import { Subject, Observable } from 'rxjs';
 export const getAuthenticationUrl = (rootUrl: string, clientId: string) =>
     `https://accounts.spotify.com/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
         rootUrl
-    )}&scope=user-read-private%20user-read-email%20user-read-playback-state%20user-modify-playback-state&response_type=token&state=123`;
+    )}&scope=user-read-recently-played%20user-read-private%20user-read-email%20user-read-playback-state%20user-modify-playback-state&response_type=token&state=123`;
 
 export class PlayerEvent<T> {
     oldValue: T;
@@ -41,7 +41,7 @@ class PlayerMonitor {
             if (
                 oldState == null ||
                 (results.device && oldState.device && results.device.id != oldState.device.id) ||
-                results.device != oldState.device
+                ((results.device == null || oldState.device == null) && results.device != oldState.device)
             )
                 this.subject.next(
                     new DeviceChanged(
@@ -54,7 +54,7 @@ class PlayerMonitor {
                 oldState == null ||
                 (results.item != null && oldState.item != null && results.item.id != oldState.item.id) ||
                 // one of them is null
-                results.item != oldState.item
+                ((results.item == null || oldState.item == null) && results.item != oldState.item)
             )
                 this.subject.next(
                     new TrackChanged(results.item ? results.item : undefined, oldState && oldState.item ? oldState.item : undefined)
@@ -75,7 +75,7 @@ class PlayerMonitor {
                 oldState == null ||
                 (results.context != null && oldState.context != null && results.context.uri != oldState.context.uri) ||
                 // one of them is null
-                results.context != oldState.context
+                ((results.context == null || oldState.context == null) && results.context != oldState.context)
             )
                 this.subject.next(
                     new ContextChanged(
@@ -126,8 +126,16 @@ export class SpotifyService {
             .then(response => (response.artists.items.length > 0 ? response.artists.items[0] : undefined));
     }
 
-    play(artistUri: string, device_id?: string) {
+    playArtist(artistUri: string, device_id?: string) {
         let options: SpotifyApi.PlayParameterObject = { context_uri: artistUri };
+        // spotifyApi chokes on undefined device_id
+        if (device_id || this.currentDeviceId) options.device_id = device_id || this.currentDeviceId;
+
+        this.spotifyApi.play(options);
+    }
+
+    playTrack(trackUris: string[], device_id?: string) {
+        let options: SpotifyApi.PlayParameterObject = { uris: trackUris };
         // spotifyApi chokes on undefined device_id
         if (device_id || this.currentDeviceId) options.device_id = device_id || this.currentDeviceId;
 

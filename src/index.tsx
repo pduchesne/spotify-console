@@ -1,7 +1,7 @@
 import * as ReactDOM from 'react-dom';
 import * as React from 'react';
 import { BrowserRouter, Route } from 'react-router-dom';
-import { SpotifyCallback, CurrentlyPlaying, DeviceSelector, ArtistPlayButton } from './react/spotify';
+import { SpotifyCallback, CurrentlyPlaying, DeviceSelector, ArtistPlayButton, PlayerHistory, TrackPlayButton } from './react/spotify';
 import { setProxifyUrlFunc } from 'am-scraper';
 import { PROXY_URL } from 'build-constants';
 import { Button, Grid, Paper } from '@material-ui/core';
@@ -142,6 +142,7 @@ class DashBoardState {
     currentContext?: SpotifyApi.ContextObject;
 
     currentlyPlayingObject?: SpotifyApi.CurrentlyPlayingObject;
+    recentTracks?: SpotifyApi.PlayHistoryObject[];
 }
 
 class DashBoard extends React.PureComponent<{ userConnection: UserConnection }, DashBoardState> {
@@ -157,7 +158,15 @@ class DashBoard extends React.PureComponent<{ userConnection: UserConnection }, 
     processPlayerEvent(evt: PlayerEvent<any>) {
         // track individual changes
         if (evt instanceof DeviceChanged) this.setState({ selectedDeviceId: evt.newValue });
-        if (evt instanceof TrackChanged) this.setState({ currentTrack: evt.newValue });
+        if (evt instanceof TrackChanged) {
+            this.setState({ currentTrack: evt.newValue });
+
+            // track has changed --> reload history
+            this.props.userConnection.spotifyService
+                .getApi()
+                .getMyRecentlyPlayedTracks()
+                .then(recentTracks => this.setState({ recentTracks: recentTracks.items }));
+        }
         if (evt instanceof ContextChanged) this.setState({ currentContext: evt.newValue });
         if (evt instanceof PlayerStateChanged) this.setState(evt.newValue);
 
@@ -187,9 +196,18 @@ class DashBoard extends React.PureComponent<{ userConnection: UserConnection }, 
                 />
                 <CurrentlyPlaying currentlyPlaying={this.state.currentlyPlayingObject} spotifyService={userConnection.spotifyService} />
                 <Grid container spacing={24}>
-                    <Grid item xs>
-                        <Paper>{/* <PlayerHistory spotifyService={this.state.userConnection.spotifyService} /> */}</Paper>
-                    </Grid>
+                    {this.state.recentTracks && (
+                        <Grid item xs>
+                            <Paper>
+                                <PlayerHistory
+                                    tracks={this.state.recentTracks}
+                                    renderPlayAction={(trackUri: string) => (
+                                        <TrackPlayButton trackUri={trackUri} spotifyService={userConnection.spotifyService} />
+                                    )}
+                                />
+                            </Paper>
+                        </Grid>
+                    )}
                     {currentTrack && (
                         <Grid item xs>
                             <Paper>
