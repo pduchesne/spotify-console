@@ -3,7 +3,6 @@ import { Redirect, Link } from 'react-router-dom';
 import * as queryString from 'query-string';
 import Icon from '@material-ui/core/Icon';
 import { IconButton, Select, MenuItem } from '@material-ui/core';
-import { AMSimilar } from 'react/am';
 import { SpotifyService } from 'services/spotify/spotify';
 
 export class SpotifyCallback extends React.PureComponent<{ location: any; setToken: (token: string) => void }, {}> {
@@ -47,7 +46,7 @@ const styles = {
     }
 };
 
-class ArtistPlayButton extends React.PureComponent<
+export class ArtistPlayButton extends React.PureComponent<
     { artistName: string; spotifyService: SpotifyService },
     { artist?: SpotifyApi.ArtistObjectFull }
 > {
@@ -75,40 +74,14 @@ class ArtistPlayButton extends React.PureComponent<
 }
 
 interface CurrentlyPlayingState {
-    currentlyPlaying?: SpotifyApi.CurrentlyPlayingResponse;
+    //currentlyPlaying?: SpotifyApi.CurrentlyPlayingResponse;
 }
-export class CurrentlyPlaying extends React.PureComponent<{ spotifyService: SpotifyService }, CurrentlyPlayingState> {
-    // see recommended pattern : https://github.com/reactjs/rfcs/issues/26
-
-    state: CurrentlyPlayingState = {};
-
-    /*
-    static getDerivedStateFromProps(nextProps: { userConnection: UserConnection }, prevState: CurrentlyPlayingState) {
-        let newApi = nextProps.userConnection ? nextProps.userConnection.spotifyApi : undefined;
-        if (!prevState || newApi !== prevState.spotifyApi)
-            return {
-                spotifyApi: newApi
-            };
-
-        return null;
-    }
-    */
-
-    timer: any;
-    componentDidMount() {
-        this.refresh();
-        // refresh 'currently playing' periodically
-        this.timer = setInterval(() => this.refresh(), 3000);
-    }
-
-    refresh() {
-        this.props.spotifyService.spotifyApi.getMyCurrentPlayingTrack((error, results) => {
-            this.setState({ currentlyPlaying: results });
-        });
-    }
-
+export class CurrentlyPlaying extends React.PureComponent<
+    { currentlyPlaying?: SpotifyApi.CurrentlyPlayingObject; spotifyService: SpotifyService },
+    CurrentlyPlayingState
+> {
     render() {
-        let { currentlyPlaying } = this.state;
+        let { currentlyPlaying } = this.props;
         let spotifyService = this.props.spotifyService;
 
         const renderNowPlaying = (currentlyPlaying: SpotifyApi.CurrentlyPlayingResponse) => (
@@ -131,10 +104,6 @@ export class CurrentlyPlaying extends React.PureComponent<{ spotifyService: Spot
                         <Icon>skip_next</Icon>
                     </IconButton>
                 </div>
-                <AMSimilar
-                    query={currentlyPlaying.item!.artists[0].name}
-                    renderPlayAction={(artistName: string) => <ArtistPlayButton artistName={artistName} spotifyService={spotifyService} />}
-                />
             </>
         );
 

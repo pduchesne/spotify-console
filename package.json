@@ -34,12 +34,13 @@
         "@types/query-string": "6.1.1",
         "@types/react-router": "4.4.3",
         "@types/react-router-dom": "4.3.1",
-        "query-string": "6.2.0",
         "am-scraper": "pduchesne/am-scraper",
+        "query-string": "6.2.0",
         "react": "16.3.2",
         "react-dom": "16.3.3",
         "react-router": "4.3.1",
         "react-router-dom": "4.3.1",
+        "rxjs": "^6.3.3",
         "spotify-web-api-js": "pduchesne/spotify-web-api-js#fix_play_request_type"
     }
 }

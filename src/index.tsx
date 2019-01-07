@@ -1,11 +1,20 @@
 import * as ReactDOM from 'react-dom';
 import * as React from 'react';
 import { BrowserRouter, Route } from 'react-router-dom';
-import { SpotifyCallback, CurrentlyPlaying, DeviceSelector } from './react/spotify';
+import { SpotifyCallback, CurrentlyPlaying, DeviceSelector, ArtistPlayButton } from './react/spotify';
 import { setProxifyUrlFunc } from 'am-scraper';
 import { PROXY_URL } from 'build-constants';
-import { Button } from '@material-ui/core';
-import { getAuthenticationUrl, SpotifyService } from 'services/spotify/spotify';
+import { Button, Grid, Paper } from '@material-ui/core';
+import {
+    getAuthenticationUrl,
+    SpotifyService,
+    PlayerEvent,
+    DeviceChanged,
+    TrackChanged,
+    ContextChanged,
+    PlayerStateChanged
+} from 'services/spotify/spotify';
+import { AMSimilar } from 'react/am';
 
 /* Set proxy to use for am-scraper */
 var isNode = new Function('try {return this===global;}catch(e){return false;}');
@@ -33,8 +42,11 @@ export class App extends React.PureComponent<{}, AppState> {
     authenticateSpotify = (token: string) => {
         if (token) {
             let spotifyService = new SpotifyService(token);
+
+            //TODO if userConnection already exists in state, dismantle it
+
             let userConnection = {
-                spotifyService: new SpotifyService(token)
+                spotifyService: spotifyService
             };
 
             this.setState({ userConnection: userConnection });
@@ -66,15 +78,6 @@ export class App extends React.PureComponent<{}, AppState> {
         }
     };
 
-    selectPlaybackDevice = (deviceId: string) => {
-        if (this.state.userConnection) {
-            this.state.userConnection.spotifyService.currentDeviceId = deviceId;
-            this.setState({
-                userConnection: { ...this.state.userConnection, selectedDeviceId: deviceId }
-            });
-        }
-    };
-
     render() {
         return (
             <UserContext.Provider value={this.state.userConnection}>
@@ -86,16 +89,9 @@ export class App extends React.PureComponent<{}, AppState> {
                             render={props => (
                                 <>
                                     <Header {...props} userConnection={this.state.userConnection} />
-                                    {this.state.userConnection && (
-                                        <>
-                                            <DeviceSelector
-                                                selected={this.state.userConnection.selectedDeviceId}
-                                                devices={this.state.userConnection.spotifyDevices}
-                                                onchange={this.selectPlaybackDevice}
-                                            />
-                                            <CurrentlyPlaying spotifyService={this.state.userConnection.spotifyService} />
-                                        </>
-                                    )}
+                                    {/* TODO include Header in DashBoard and redirect this route automatically to authentication when needed*/
+
+                                    this.state.userConnection && <DashBoard userConnection={this.state.userConnection} />}
                                 </>
                             )}
                         />
@@ -135,6 +131,86 @@ class Header extends React.PureComponent<{ userConnection?: UserConnection }, {}
                     </Button>
                 </div>
             );
+    }
+}
+
+class DashBoardState {
+    is_playing: boolean;
+    progress_ms?: number;
+    selectedDeviceId?: string;
+    currentTrack?: SpotifyApi.TrackObjectFull;
+    currentContext?: SpotifyApi.ContextObject;
+
+    currentlyPlayingObject?: SpotifyApi.CurrentlyPlayingObject;
+}
+
+class DashBoard extends React.PureComponent<{ userConnection: UserConnection }, DashBoardState> {
+    state: DashBoardState = { is_playing: false };
+
+    selectPlaybackDevice = (deviceId: string) => {
+        this.props.userConnection.spotifyService.currentDeviceId = deviceId;
+        this.setState({
+            selectedDeviceId: deviceId
+        });
+    };
+
+    processPlayerEvent(evt: PlayerEvent<any>) {
+        // track individual changes
+        if (evt instanceof DeviceChanged) this.setState({ selectedDeviceId: evt.newValue });
+        if (evt instanceof TrackChanged) this.setState({ currentTrack: evt.newValue });
+        if (evt instanceof ContextChanged) this.setState({ currentContext: evt.newValue });
+        if (evt instanceof PlayerStateChanged) this.setState(evt.newValue);
+
+        // force update of currentlyPlayingState
+        this.setState({ currentlyPlayingObject: this.props.userConnection.spotifyService.monitor.currentState });
+    }
+
+    componentDidMount() {
+        // see recommended pattern : https://github.com/reactjs/rfcs/issues/26
+
+        this.props.userConnection.spotifyService.playerEvents().subscribe(
+            this.processPlayerEvent.bind(this)
+            // ,e => console.log('onError: %s', e)
+        );
+        this.setState({ currentlyPlayingObject: this.props.userConnection.spotifyService.monitor.currentState });
+    }
+
+    render() {
+        let { userConnection } = this.props;
+        let currentTrack = this.state.currentlyPlayingObject && this.state.currentlyPlayingObject.item;
+        return (
+            <>
+                <DeviceSelector
+                    selected={this.state.selectedDeviceId}
+                    devices={userConnection.spotifyDevices}
+                    onchange={this.selectPlaybackDevice}
+                />
+                <CurrentlyPlaying currentlyPlaying={this.state.currentlyPlayingObject} spotifyService={userConnection.spotifyService} />
+                <Grid container spacing={24}>
+                    <Grid item xs>
+                        <Paper>{/* <PlayerHistory spotifyService={this.state.userConnection.spotifyService} /> */}</Paper>
+                    </Grid>
+                    {currentTrack && (
+                        <Grid item xs>
+                            <Paper>
+                                <AMSimilar
+                                    query={currentTrack.artists[0].name}
+                                    renderPlayAction={(artistName: string) => (
+                                        <ArtistPlayButton artistName={artistName} spotifyService={userConnection.spotifyService} />
+                                    )}
+                                />
+                            </Paper>
+                        </Grid>
+                    )}
+                    <Grid item xs>
+                        test
+                    </Grid>
+                    <Grid item xs>
+                        test
+                    </Grid>
+                </Grid>
+            </>
+        );
     }
 }
 
