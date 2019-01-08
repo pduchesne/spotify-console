@@ -4,6 +4,7 @@ import * as queryString from 'query-string';
 import Icon from '@material-ui/core/Icon';
 import { IconButton, Select, MenuItem } from '@material-ui/core';
 import { SpotifyService } from 'services/spotify/spotify';
+import { PromiseComponent } from './utils';
 
 export class SpotifyCallback extends React.PureComponent<{ location: any; setToken: (token: string) => void }, {}> {
     state: { hasReceivedToken?: boolean } = {};
@@ -46,37 +47,13 @@ const styles = {
     }
 };
 
-export class ArtistPlayButton extends React.PureComponent<
-    { artistName: string; spotifyService: SpotifyService },
-    { artist?: SpotifyApi.ArtistObjectFull }
-> {
-    state: { artist?: SpotifyApi.ArtistObjectFull } = { artist: undefined };
-
-    componentDidMount() {
-        let { spotifyService, artistName } = this.props;
-        if (spotifyService && artistName) spotifyService.getArtistByName(artistName).then(artist => this.setState({ artist: artist }));
-    }
-
-    render() {
-        let { spotifyService } = this.props;
-        let { artist } = this.state;
-
-        if (artist !== undefined) {
-            return (
-                <IconButton style={styles.button} color="primary" onClick={() => spotifyService.playArtist(artist!.uri)}>
-                    <Icon style={styles.icon}>play_circle_outline</Icon>
-                </IconButton>
-            );
-        } else {
-            return null;
-        }
-    }
-}
-
-export class TrackPlayButton extends React.PureComponent<{ trackUri: string; spotifyService: SpotifyService }> {
+export class PlayButton extends React.PureComponent<{ trackUris?: string[]; contextUri?: string; spotifyService: SpotifyService }> {
     render() {
         return (
-            <IconButton style={styles.button} color="primary" onClick={() => this.props.spotifyService.playTrack([this.props.trackUri])}>
+            <IconButton
+                style={styles.button}
+                color="primary"
+                onClick={() => this.props.spotifyService.play(this.props.trackUris, this.props.contextUri)}>
                 <Icon style={styles.icon}>play_circle_outline</Icon>
             </IconButton>
         );
@@ -159,7 +136,7 @@ export class DeviceSelector extends React.PureComponent<
     }
 }
 
-export class PlayerHistory extends React.Component<
+export class PlayerHistory extends React.PureComponent<
     { tracks: SpotifyApi.PlayHistoryObject[]; renderPlayAction?: (trackUri: string) => JSX.Element },
     {}
 > {
@@ -185,29 +162,17 @@ type TopTracksProps = {
 };
 
 type TopTracksState = {
-    topTracksResponse?: SpotifyApi.UsersTopTracksResponse;
     range?: string;
 };
 
-export class TopTracks extends React.Component<TopTracksProps, TopTracksState> {
+export class TopTracks extends React.PureComponent<TopTracksProps, TopTracksState> {
     state: TopTracksState = { range: 'medium_term' };
 
-    fetchTopTracks() {
+    fetchTopTracks(range?: string): Promise<SpotifyApi.UsersTopTracksResponse> {
         let options: { time_range?: string } = {};
 
-        if (this.state.range) options.time_range = this.state.range;
-        this.props.spotifyService
-            .getApi()
-            .getMyTopTracks(options)
-            .then(resp => this.setState({ topTracksResponse: resp }));
-    }
-
-    componentDidMount() {
-        this.fetchTopTracks();
-    }
-
-    componentDidUpdate(prevProps: TopTracksProps, prevState: TopTracksState) {
-        if (prevState.range != this.state.range) this.fetchTopTracks();
+        if (range) options.time_range = range;
+        return this.props.spotifyService.getApi().getMyTopTracks(options);
     }
 
     render() {
@@ -221,17 +186,47 @@ export class TopTracks extends React.Component<TopTracksProps, TopTracksState> {
                     <MenuItem value="medium_term">Medium Term</MenuItem>
                     <MenuItem value="long_term">Long Term</MenuItem>
                 </Select>
-                {this.state.topTracksResponse ? (
-                    <ul>
-                        {this.state.topTracksResponse.items.map((track, idx) => (
-                            <li key={track.id + '_' + idx}>
-                                {track.name} {this.props.renderPlayAction ? this.props.renderPlayAction(track.uri) : null}
-                            </li>
-                        ))}
-                    </ul>
-                ) : (
-                    <div>Loading ...</div>
-                )}
+                <PlayableItemsPromiseList
+                    args={this.state.range}
+                    promiseFn={(range: string) => this.fetchTopTracks(range).then(response => response.items)}
+                    renderPlayAction={this.props.renderPlayAction}
+                />
+            </div>
+        );
+    }
+}
+
+type PlayableItem = {
+    name: string;
+    id: string;
+    uri: string;
+};
+
+type PlayableItemsPromiseListProps<U> = {
+    promiseFn: (arg: U) => Promise<PlayableItem[]>;
+    args: U;
+    renderPlayAction?: (itemUri: string) => JSX.Element;
+};
+
+export class PlayableItemsPromiseList<U> extends React.PureComponent<PlayableItemsPromiseListProps<U>> {
+    render() {
+        return (
+            <div>
+                <PromiseComponent
+                    args={this.props.args}
+                    promiseFn={this.props.promiseFn}
+                    render={result =>
+                        result && (
+                            <ul>
+                                {result.map((item, idx) => (
+                                    <li key={item.id + '_' + idx}>
+                                        {item.name} {this.props.renderPlayAction ? this.props.renderPlayAction(item.uri) : null}
+                                    </li>
+                                ))}
+                            </ul>
+                        )
+                    }
+                />
             </div>
         );
     }

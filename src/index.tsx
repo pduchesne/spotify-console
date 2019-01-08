@@ -3,12 +3,12 @@ import * as React from 'react';
 import { BrowserRouter, Route } from 'react-router-dom';
 import {
     SpotifyCallback,
-    CurrentlyPlaying,
-    DeviceSelector,
-    ArtistPlayButton,
     PlayerHistory,
-    TrackPlayButton,
-    TopTracks
+    TopTracks,
+    PlayButton,
+    DeviceSelector,
+    CurrentlyPlaying,
+    PlayableItemsPromiseList
 } from './react/spotify';
 import { setProxifyUrlFunc } from 'am-scraper';
 import { PROXY_URL } from 'build-constants';
@@ -23,6 +23,7 @@ import {
     PlayerStateChanged
 } from 'services/spotify/spotify';
 import { AMSimilar } from 'react/am';
+import { PromiseComponent } from 'react/utils';
 
 /* Set proxy to use for am-scraper */
 var isNode = new Function('try {return this===global;}catch(e){return false;}');
@@ -142,6 +143,24 @@ class DashBoardState {
 class DashBoard extends React.PureComponent<{ userConnection: UserConnection }, DashBoardState> {
     state: DashBoardState = { is_playing: false };
 
+    constructor(props: { userConnection: UserConnection }) {
+        super(props);
+        this.renderPlayTrackAction = this.renderPlayTrackAction.bind(this);
+        this.renderPlayArtistAction = this.renderPlayArtistAction.bind(this);
+    }
+
+    renderPlayTrackAction = (trackUri: string) => (
+        <PlayButton trackUris={[trackUri]} spotifyService={this.props.userConnection.spotifyService} />
+    );
+
+    renderPlayArtistAction = (artistName: string) => (
+        <PromiseComponent
+            args={artistName}
+            promiseFn={(artistName: string) => this.props.userConnection.spotifyService.getArtistByName(artistName)}
+            render={artist => artist && <PlayButton contextUri={artist.uri} spotifyService={this.props.userConnection.spotifyService} />}
+        />
+    );
+
     selectPlaybackDevice = (deviceId: string) => {
         this.props.userConnection.spotifyService.currentDeviceId = deviceId;
         this.setState({
@@ -178,45 +197,78 @@ class DashBoard extends React.PureComponent<{ userConnection: UserConnection }, 
         this.setState({ currentlyPlayingObject: this.props.userConnection.spotifyService.monitor.currentState });
     }
 
-    renderWidgets(): JSX.Element[] {
+    renderWidgetLine(widgets: JSX.Element[]) {
+        return (
+            <Grid container spacing={24}>
+                {widgets.map((widget, idx) => (
+                    <Grid item xs key={idx}>
+                        <Paper>{widget}</Paper>
+                    </Grid>
+                ))}
+            </Grid>
+        );
+    }
+
+    renderArtistWidgets(): JSX.Element[] {
+        let widgets: JSX.Element[] = [];
+
+        let currentTrack = this.state.currentlyPlayingObject && this.state.currentlyPlayingObject.item;
+        if (currentTrack) {
+            widgets.push(
+                <div>
+                    Artist Top Tracks
+                    <PlayableItemsPromiseList
+                        args={currentTrack.artists[0].id}
+                        promiseFn={(artistId: string) =>
+                            this.props.userConnection.spotifyService
+                                .getApi()
+                                .getArtistTopTracks(artistId, 'from_token')
+                                .then(response => response.tracks)
+                        }
+                        renderPlayAction={trackUri => (
+                            <PlayButton trackUris={[trackUri]} spotifyService={this.props.userConnection.spotifyService} />
+                        )}
+                    />
+                </div>
+            );
+
+            widgets.push(
+                <div>
+                    Related Artists
+                    <PlayableItemsPromiseList
+                        args={currentTrack.artists[0].id}
+                        promiseFn={(artistId: string) =>
+                            this.props.userConnection.spotifyService
+                                .getApi()
+                                .getArtistRelatedArtists(artistId)
+                                .then(response => response.artists)
+                        }
+                        renderPlayAction={artistUri => (
+                            <PlayButton contextUri={artistUri} spotifyService={this.props.userConnection.spotifyService} />
+                        )}
+                    />
+                </div>
+            );
+
+            widgets.push(<AMSimilar query={currentTrack.artists[0].name} renderPlayAction={this.renderPlayArtistAction} />);
+        }
+
+        return widgets;
+    }
+
+    renderUserWidgets(): JSX.Element[] {
         let widgets: JSX.Element[] = [];
 
         if (this.state.recentTracks)
-            widgets.push(
-                <PlayerHistory
-                    tracks={this.state.recentTracks}
-                    renderPlayAction={(trackUri: string) => (
-                        <TrackPlayButton trackUri={trackUri} spotifyService={this.props.userConnection.spotifyService} />
-                    )}
-                />
-            );
+            widgets.push(<PlayerHistory tracks={this.state.recentTracks} renderPlayAction={this.renderPlayTrackAction} />);
 
-        widgets.push(
-            <TopTracks
-                spotifyService={this.props.userConnection.spotifyService}
-                renderPlayAction={(trackUri: string) => (
-                    <TrackPlayButton trackUri={trackUri} spotifyService={this.props.userConnection.spotifyService} />
-                )}
-            />
-        );
-
-        let currentTrack = this.state.currentlyPlayingObject && this.state.currentlyPlayingObject.item;
-        if (currentTrack)
-            widgets.push(
-                <AMSimilar
-                    query={currentTrack.artists[0].name}
-                    renderPlayAction={(artistName: string) => (
-                        <ArtistPlayButton artistName={artistName} spotifyService={this.props.userConnection.spotifyService} />
-                    )}
-                />
-            );
+        widgets.push(<TopTracks spotifyService={this.props.userConnection.spotifyService} renderPlayAction={this.renderPlayTrackAction} />);
 
         return widgets;
     }
 
     render() {
         let { userConnection } = this.props;
-        let widgets = this.renderWidgets();
 
         return (
             <>
@@ -227,13 +279,9 @@ class DashBoard extends React.PureComponent<{ userConnection: UserConnection }, 
                     onchange={this.selectPlaybackDevice}
                 />
                 <CurrentlyPlaying currentlyPlaying={this.state.currentlyPlayingObject} spotifyService={userConnection.spotifyService} />
-                <Grid container spacing={24}>
-                    {widgets.map((widget, idx) => (
-                        <Grid item xs key={idx}>
-                            <Paper>{widget}</Paper>
-                        </Grid>
-                    ))}
-                </Grid>
+
+                {this.renderWidgetLine(this.renderArtistWidgets())}
+                {this.renderWidgetLine(this.renderUserWidgets())}
             </>
         );
     }

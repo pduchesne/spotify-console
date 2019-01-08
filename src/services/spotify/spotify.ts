@@ -134,16 +134,11 @@ export class SpotifyService {
             .then(response => (response.artists.items.length > 0 ? response.artists.items[0] : undefined));
     }
 
-    playArtist(artistUri: string, device_id?: string) {
-        let options: SpotifyApi.PlayParameterObject = { context_uri: artistUri };
-        // spotifyApi chokes on undefined device_id
-        if (device_id || this.currentDeviceId) options.device_id = device_id || this.currentDeviceId;
+    play(trackUris?: string[], contextUri?: string, device_id?: string) {
+        let options: SpotifyApi.PlayParameterObject = {};
+        if (trackUris && trackUris.length > 0) options.uris = trackUris;
 
-        this.spotifyApi.play(options);
-    }
-
-    playTrack(trackUris: string[], device_id?: string) {
-        let options: SpotifyApi.PlayParameterObject = { uris: trackUris };
+        if (contextUri) options.context_uri = contextUri;
         // spotifyApi chokes on undefined device_id
         if (device_id || this.currentDeviceId) options.device_id = device_id || this.currentDeviceId;
 
